@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_executable(GuiApp "" )
 
 # Add target sources
-target_sources(GuiApp PUBLIC "src/Application.cpp")
+target_sources(GuiApp PUBLIC "src/Application.cpp" "src/Application.hpp")
 
 # Check if Git is installed, and source directory
 # is under version control.

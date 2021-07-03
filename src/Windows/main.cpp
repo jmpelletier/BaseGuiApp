@@ -6,7 +6,8 @@
 // This is because we need ImTextureID to carry a 64-bit value and by default ImTextureID is defined as void*.
 // This define is set in the example .vcxproj file and need to be replicated in your app or by adding it to your imconfig.h file.
 
-#include "imgui.h"
+#include "../Application.hpp"
+
 #include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 #include <d3d12.h>
@@ -60,6 +61,10 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 // Main code
 int main(int argc, const char *argv[])
 {
+    // Create a new JMP::Application instance
+    JMP::Application app;
+
+
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
@@ -78,41 +83,12 @@ int main(int argc, const char *argv[])
     ::ShowWindow(hwnd, SW_SHOWDEFAULT);
     ::UpdateWindow(hwnd);
 
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
-
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT,
         DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
-
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Read 'docs/FONTS.md' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-    //IM_ASSERT(font != NULL);
-
-    // Our state
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
     bool done = false;
@@ -140,22 +116,8 @@ int main(int argc, const char *argv[])
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
         ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            
-            ImGui::End();
-        }
-
-        // Rendering
-        ImGui::Render();
+        app.renderGUI();
 
         FrameContext* frameCtx = WaitForNextFrameResources();
         UINT backBufferIdx = g_pSwapChain->GetCurrentBackBufferIndex();
@@ -172,7 +134,7 @@ int main(int argc, const char *argv[])
         g_pd3dCommandList->ResourceBarrier(1, &barrier);
 
         // Render Dear ImGui graphics
-        const float clear_color_with_alpha[4] = { clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w };
+        float const* const clear_color_with_alpha = app.getClearColorPremultiplied();
         g_pd3dCommandList->ClearRenderTargetView(g_mainRenderTargetDescriptor[backBufferIdx], clear_color_with_alpha, 0, NULL);
         g_pd3dCommandList->OMSetRenderTargets(1, &g_mainRenderTargetDescriptor[backBufferIdx], FALSE, NULL);
         g_pd3dCommandList->SetDescriptorHeaps(1, &g_pd3dSrvDescHeap);
@@ -198,7 +160,6 @@ int main(int argc, const char *argv[])
     // Cleanup
     ImGui_ImplDX12_Shutdown();
     ImGui_ImplWin32_Shutdown();
-    ImGui::DestroyContext();
 
     CleanupDeviceD3D();
     ::DestroyWindow(hwnd);
